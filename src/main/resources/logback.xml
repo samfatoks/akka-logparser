@@ -1,0 +1,77 @@
+<configuration>
+  <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <pattern>%d{HH:mm:ss.SSS} %highlight(%-6level) [%t] %cyan(%logger{36}) - %msg %n</pattern>
+    </encoder>
+  </appender>
+
+  <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <file>logs/application.log</file>
+    <encoder>
+      <!--<pattern>%date [%level] from %logger in %thread - %message%n%xException</pattern>-->
+      <!--<pattern>%d{HH:mm:ss.SSS} Thread:[%thread] %-5level %logger{36} - %msg%n</pattern>-->
+      <pattern>%date{ISO8601} %-5level [%t] %logger{5} - %msg%n</pattern>
+    </encoder>
+
+    <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+      <!-- rollover daily -->
+      <fileNamePattern>logs/application-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+      <!-- each file should be at most 100MB, keep 60 days worth of history, but at most 20GB -->
+      <maxFileSize>100MB</maxFileSize>
+      <maxHistory>60</maxHistory>
+      <totalSizeCap>20GB</totalSizeCap>
+    </rollingPolicy>
+  </appender>
+
+  <appender name="JSON" class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <file>logs/application.json</file>
+    <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+      <providers>
+        <timestamp/>
+        <logLevel/>
+        <loggerName/>
+        <threadName/>
+        <message/>
+        <logstashMarkers/>
+        <arguments/>
+        <stackTrace/>
+      </providers>
+    </encoder>
+
+    <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+      <!-- rollover daily -->
+      <fileNamePattern>logs/application-%d{yyyy-MM-dd}.%i.json</fileNamePattern>
+      <!-- each file should be at most 100MB, keep 60 days worth of history, but at most 20GB -->
+      <maxFileSize>100MB</maxFileSize>
+      <maxHistory>60</maxHistory>
+      <totalSizeCap>20GB</totalSizeCap>
+    </rollingPolicy>
+  </appender>
+
+  <appender name="ASYNCFILE" class="ch.qos.logback.classic.AsyncAppender">
+    <appender-ref ref="FILE"/>
+  </appender>
+
+  <appender name="ASYNCJSON" class="ch.qos.logback.classic.AsyncAppender">
+    <appender-ref ref="JSON"/>
+  </appender>
+
+  <appender name="ASYNCSTDOUT" class="ch.qos.logback.classic.AsyncAppender">
+    <appender-ref ref="STDOUT"/>
+  </appender>
+
+
+  <logger name="application" level="DEBUG"/>
+  <logger name="actors" level="DEBUG"/>
+  <logger name="akka" level="INFO"/>
+  <logger name="actors" level="DEBUG"/>
+  <logger name="com.typesafe.sslconfig" level="INFO"/>
+  <logger name="com.fibbo.logparser" level="DEBUG"/>
+
+  <root level="INFO">
+    <appender-ref ref="ASYNCFILE"/>
+    <appender-ref ref="ASYNCJSON"/>
+    <appender-ref ref="ASYNCSTDOUT"/>
+  </root>
+
+</configuration>

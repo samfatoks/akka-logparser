@@ -1,0 +1,14 @@
+.idea
+*.iml
+*.ipr
+.classpath
+.settings
+.project
+target
+out
+project/boot
+/bin/
+*.log
+mg
+logs
+.DS_Store
