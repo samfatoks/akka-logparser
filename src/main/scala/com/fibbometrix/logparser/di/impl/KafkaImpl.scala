@@ -1,10 +1,10 @@
-package com.fibbo.logparser.di.impl
+package com.fibbometrix.logparser.di.impl
 
 import javax.inject.Inject
 import akka.kafka.{ConsumerSettings, Subscriptions}
 import akka.kafka.scaladsl.{Consumer, Producer}
 import akka.stream.scaladsl.{Sink, Source}
-import com.fibbo.logparser.di.intf.Kafka
+import com.fibbometrix.logparser.di.intf.Kafka
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
 import org.apache.kafka.clients.consumer.{ConsumerConfig, ConsumerRecord}

@@ -1,4 +1,4 @@
-package com.fibbo.logparser.di.intf
+package com.fibbometrix.logparser.di.intf
 
 import akka.stream.scaladsl.{Sink, Source}
 import org.apache.kafka.clients.consumer.ConsumerRecord

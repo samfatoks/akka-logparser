@@ -1,4 +1,3 @@
-
 lazy val commonSettings = Seq(
   version       := "1.0",
   scalaVersion  := "2.12.8",
@@ -10,7 +9,6 @@ lazy val commonSettings = Seq(
     "Typesafe Repo" at "http://repo.typesafe.com/typesafe/releases/",
     Resolver.sonatypeRepo("snapshots"),
     Resolver.sonatypeRepo("releases"),
-    //    Resolver.jcenterRepo
   ),
   libraryDependencies ++= commonDependencies,
 )
@@ -21,18 +19,13 @@ lazy val revolverSettings = Seq(
 )
 
 lazy val assemblySettings = Seq(
-  mainClass in assembly := Some("com.fibbo.logparser.Boot"),
+  mainClass in assembly := Some("com.fibbometrix.logparser.Boot"),
   assemblyJarName in assembly := s"logparser-${version.value}.jar",
-  //  assemblyExcludedJars in assembly := {
-  //    val cp = (fullClasspath in assembly).value
-  //    cp filter {_.data.getName == "compile-0.1.0.jar"}
-  //  }
 )
 
-val akkaVersion = "2.5.19"
-val circeVersion = "0.9.3"
+val akkaVersion = "2.5.30"
+val circeVersion = "0.12.3"
 val logbackVersion   = "1.2.3"
-val scalaTestV = "3.0.5"
 val scalaLoggingVersion = "3.9.0"
 
 
@@ -48,12 +41,6 @@ val akkaStack = Seq(
   "com.typesafe.akka" %% "akka-stream" % akkaVersion,
   "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
   "com.typesafe.akka" %% "akka-stream-kafka" % "1.0-RC1",
-  "com.lightbend.akka" %% "akka-stream-alpakka-elasticsearch" % "1.0-M2",
-)
-
-val testStack = Seq(
-  "org.scalatest" %% "scalatest" % scalaTestV % Test,
-  "com.typesafe.akka" %% "akka-testkit" % akkaVersion % Test,
 )
 
 val loggingStack = Seq(
@@ -64,25 +51,15 @@ val loggingStack = Seq(
 
 val utilStack = Seq(
   "net.codingwell" %% "scala-guice" % "4.2.1",
-//  "com.google.inject.extensions" % "guice-assistedinject" % "4.2.2",
-  "cool.graph" % "cuid-java" % "0.1.1",
-//  "com.lihaoyi" %% "upickle" % "0.7.1",
-//  "com.thesamet.scalapb" %% "compilerplugin" % "0.8.2",
-  "com.sksamuel.avro4s" %% "avro4s-core" % "2.0.3",
-  //"com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf",
 )
-
-val commonDependencies = testStack ++ circe ++ loggingStack
+val commonDependencies = circe ++ loggingStack
 
 lazy val main = (project in file("."))
-//  .aggregate(backend)
-
-//lazy val backend: Project = (project in file("backend"))
   .settings(commonSettings: _*)
   .settings(revolverSettings: _*)
   .settings(assemblySettings: _*)
   .settings(
-    name := "AkkaLogParser",
+    name := "akka-logparser",
     libraryDependencies ++= akkaStack ++ utilStack,
     inThisBuild(List(
       version := "0.0.1",
@@ -91,7 +68,6 @@ lazy val main = (project in file("."))
       licenses += ("MIT", url("http://opensource.org/licenses/MIT")),
     )),
   )
-  .enablePlugins(JavaAppPackaging)
   .enablePlugins(RevolverPlugin)
 
 

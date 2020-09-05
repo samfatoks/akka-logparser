@@ -9,6 +9,6 @@ out
 project/boot
 /bin/
 *.log
-mg
+mg_backup
 logs
 .DS_Store

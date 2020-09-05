@@ -1,11 +1,11 @@
-package com.fibbo.logparser.actor
+package com.fibbometrix.logparser.actor
 
 import java.util.concurrent.atomic.AtomicInteger
 
 import akka.actor.SupervisorStrategy.{Escalate, Restart, Resume, Stop}
 import akka.actor.{Actor, ActorLogging, ActorRef, OneForOneStrategy, Props, Terminated}
 import akka.event.{LogMarker, MarkerLoggingAdapter}
-import com.fibbo.logparser.util.StreamUtility
+import com.fibbometrix.logparser.util.StreamUtility
 
 import scala.collection.mutable
 import scala.concurrent.duration._
@@ -23,11 +23,6 @@ object Master {
 class Master(streamUtility: StreamUtility, workerSize: Int) extends Actor with ActorLogging {
   import Master._
 
-//  private val marker = LogMarker(name = self.path.name)
-//  implicit val log: MarkerLoggingAdapter = akka.event.Logging.withMarker(context.system, this.getClass)
-
-  //var workitemptr = 0
-  //var workers = new ListBuffer[ActorRef]
   val workers = mutable.Set.empty[ActorRef]
 
   var workitems: List[String] = List[String]() // a buffer to hold the work items
@@ -51,19 +46,6 @@ class Master(streamUtility: StreamUtility, workerSize: Int) extends Actor with A
   }
 
   override def postStop { log.info("Master LifeCycleActor: postStop") }
-
-//  override def preRestart(reason: Throwable, message: Option[Any]) {
-//    log.info("LifeCycleActor: preRestart")
-//    log.info(s"LifeCycleActor reason: ${reason.getMessage}")
-//    log.info(s"LifeCycleActor message: ${message.getOrElse("")}")
-//    super.preRestart(reason, message)
-//  }
-//  override def postRestart(reason: Throwable) {
-//    log.info("LifeCycleActor: postRestart")
-//    log.info(s"LifeCycleActor reason: ${reason.getMessage}")
-//    super.postRestart(reason)
-//  }
-
   override def receive: Receive = {
     case Workload(items: List[String]) => // a new workload has arrived
       workitems = items

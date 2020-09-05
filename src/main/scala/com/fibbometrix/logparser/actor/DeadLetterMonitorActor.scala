@@ -1,4 +1,4 @@
-package com.fibbo.logparser.actor
+package com.fibbometrix.logparser.actor
 
 import akka.actor.{DeadLetter, Actor}
 

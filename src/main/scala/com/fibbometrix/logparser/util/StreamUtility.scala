@@ -1,11 +1,10 @@
-package com.fibbo.logparser.util
+package com.fibbometrix.logparser.util
 
 import java.io.File
 import java.nio.file.{Path, Paths}
 import java.text.SimpleDateFormat
 import java.time.{Instant, LocalDate, LocalDateTime, ZoneId}
 import java.time.format.DateTimeFormatter
-import java.util.Date
 import java.util.regex.Pattern
 
 import javax.inject.Inject
@@ -16,53 +15,26 @@ import akka.stream._
 import akka.stream.scaladsl.Framing.FramingException
 import akka.stream.scaladsl.{Balance, Broadcast, FileIO, Flow, Framing, GraphDSL, Keep, Merge, RunnableGraph, Sink, Source, Zip}
 import akka.util.ByteString
-import com.fibbo.logparser.di.intf.Kafka
+import com.fibbometrix.logparser.di.intf.Kafka
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
 import io.circe.{HCursor, Json}
 import org.apache.kafka.clients.producer.ProducerRecord
 
 import scala.concurrent.{ExecutionContext, TimeoutException}
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 import scala.concurrent.duration._
-import io.circe.generic.auto._
-import io.circe.literal._
-import io.circe.syntax._
 import io.circe.parser._
-
-
-case class SourceEvent(id: Integer)
-
-case class DomainEvent(id: Integer, processingTimestamp: Long)
-
-case class Metric(label: String, value: Int)
 
 
 class StreamUtility @Inject()(config: Config, kafka: Kafka)(implicit system: ActorSystem, ec: ExecutionContext) extends StrictLogging {
 
-  //implicit val materializer: ActorMaterializer = ActorMaterializer()
   implicit val materializer: Materializer = {
     ActorMaterializer(ActorMaterializerSettings(system).withSupervisionStrategy { e =>
       logger.error("Uncaught exception in stream!", e)
       Supervision.Stop
     })
   }
-
-  //  implicit val materializer = ActorMaterializer()
-  //  implicit val mat = ActorMaterializer(
-  //    ActorMaterializerSettings(system)
-  //      .withSupervisionStrategy(Supervision.restartingDecider)
-  //  )
-
-//    val decider: Supervision.Decider = {
-//      case _: ArithmeticException => Supervision.Resume
-//      case _: FramingException => Supervision.Resume
-//      case _ => Supervision.Stop
-//    }
-//    implicit val materializer = ActorMaterializer(
-//      ActorMaterializerSettings(system).withSupervisionStrategy(decider))
 
   val decider: Supervision.Decider = {
     case _: FramingException => Supervision.Resume
@@ -105,58 +77,11 @@ class StreamUtility @Inject()(config: Config, kafka: Kafka)(implicit system: Act
 
   }
 
-
-  def slowSink =
-    Flow[Seq[Metric]]
-      .buffer(7, OverflowStrategy.backpressure)
-      .delay(5.seconds, DelayOverflowStrategy.backpressure)
-      .to(Sink.foreach(e => logger.info(s"New Here - ${e.toString()}")))
-
-  val bufferedSink = Flow[Seq[Metric]].buffer(3, OverflowStrategy.backpressure).via(Flow[Seq[Metric]].throttle(1, 1.second, 1, ThrottleMode.shaping)).toMat(Sink.foreach(e => logger.info(s"New Here - ${e.toString()}")))(Keep.right)
-
-
-  def fastSource: Source[SourceEvent, NotUsed] =
-    Source(1 to 10)
-      //Source.fromIterator(() => Iterator.from(1, 1))
-      .map { i =>
-      logger.info(s"Producing event $i")
-      SourceEvent(i)
-    }
-
-  def enrichWithTimestamp =
-    Flow[SourceEvent]
-      .map { e =>
-        logger.info(s"Enriching event ${e.id}")
-        DomainEvent(e.id, System.currentTimeMillis())
-      }
-
-  def countStage =
-    Flow[DomainEvent]
-      .grouped(2)
-      .map { seq => Seq(Metric("count", seq.size)) }
-
-  def process: Unit = {
-
-    fastSource
-      .via(enrichWithTimestamp)
-      .via(countStage)
-      .to(bufferedSink)
-      .run()
-  }
-
-
   def lineSink(filename: String) =
     Flow[String]
       //.alsoTo(Sink.foreach(s => logger.info(s"$filename: $s")))
       .map(s => ByteString(s + "\n"))
       .toMat(FileIO.toPath(Paths.get(filename)))(Keep.right)
-
-
-
-//  def modifiedKafkaSink(topic: String) = Flow[JsValue].map { msg =>
-//    val partition = 0
-//    new ProducerRecord[Integer, JsValue](topic, partition, 1, msg)
-//  }
 
     def modifiedKafkaSink(topic: String) = Flow[String].map { msg =>
 //      val partition = 0
@@ -230,7 +155,6 @@ class StreamUtility @Inject()(config: Config, kafka: Kafka)(implicit system: Act
 
     println("About to run")
     g.run()
-    //val sum: Future[Int] = g.run()
   }
 
   val g5 = RunnableGraph.fromGraph(GraphDSL.create() { implicit builder =>
@@ -269,41 +193,6 @@ class StreamUtility @Inject()(config: Config, kafka: Kafka)(implicit system: Act
 
   def emptyStringSource = Source.single("")
 
-//  def jsonTransformation(hashTag: Hashtag, msg: String): JsValue = {
-//
-//    val tweetResult: JsResult[Tweet] = Json.parse(msg).validate[Tweet]
-//    tweetResult match {
-//      case tweetResult => {
-//        tweetResult match {
-//          case JsSuccess(tweet: Tweet, _) => {
-//            //logger.info(s"HashTag : $hashTag, Tweet : ${tweet}")
-//            val twitterWebsocketResponse = TwitterWebsocketResponse(System.currentTimeMillis, hashTag, tweet, Set.empty, "")
-//            Json.toJson(twitterWebsocketResponse)
-//          }
-//          case e: JsError => {
-//            logger.error("Errors: " + JsError.toJson(e).toString())
-//            JsError.toJson(e)
-//          }
-//        }
-//      }
-//    }
-//  }
-//
-//  def messageTransformer(hashTag: Hashtag, msg: String): TwitterWebsocketResponse = {
-//
-//    val tweetResult: JsResult[Tweet] = Json.parse(msg).validate[Tweet]
-//    tweetResult match {
-//      case JsSuccess(tweet: Tweet, _) => {
-//        logger.info(s"HashTag : $hashTag, Tweet : ${tweet}")
-//        TwitterWebsocketResponse(System.currentTimeMillis, hashTag, tweet, tweet.hashtags, "")
-//      }
-//      case e: JsError => {
-//        logger.error("Errors: " + JsError.toJson(e).toString())
-//        TwitterWebsocketResponse(System.currentTimeMillis, hashTag, null, Set.empty, JsError.toJson(e).toString())
-//      }
-//    }
-//  }
-
   val g = RunnableGraph.fromGraph(GraphDSL.create() { implicit builder =>
     import GraphDSL.Implicits._
     val in = Source(1 to 10)
@@ -325,27 +214,6 @@ class StreamUtility @Inject()(config: Config, kafka: Kafka)(implicit system: Act
     bcast ~> invalidReq ~> blockingFlow ~> merge
     ClosedShape
   })
-
-
-
-
-  //  def cleanUpGraph(source: Source[String, _]) = RunnableGraph.fromGraph(GraphDSL.create() { implicit builder =>
-  //    import GraphDSL.Implicits._
-  //
-  //    val out : Sink[String,_] = ???
-  //
-  //    val bcast = builder.add(Broadcast[String](2))
-  //    val merge = builder.add(Merge[String](2))
-  //
-  //    val blockingFlow = Flow[String].take(0)
-  //
-  //    val validReq = Flow[String].filter(_.size > 0)
-  //    val invalidReq = Flow[String].filter(_.size == 0)
-  //
-  //    source ~> bcast ~> validReq ~> merge ~> out
-  //    bcast ~> invalidReq ~> blockingFlow ~> merge
-  //    ClosedShape
-  //  })
 
   val pairUpWithToString =
     Flow.fromGraph(GraphDSL.create() { implicit b ⇒
@@ -381,42 +249,6 @@ class StreamUtility @Inject()(config: Config, kafka: Kafka)(implicit system: Act
     FlowShape(bcast.in, merge.out)
   })
 
-  //  def storageSink(kafkaTopic: String) = Flow.fromGraph(GraphDSL.create() { implicit builder =>
-  //    import GraphDSL.Implicits._
-  //
-  //    val filename: String = s"twitter-cleanup-tweet.log.${new SimpleDateFormat("yyyy-MM-dd-hhmmss").format(new Date)}"
-  //
-  //    val bcast = builder.add(Broadcast[TwitterWebsocketResponse](3))
-  //    val fileSink = lineSink(filename)
-  //    val jsonStringTransformer: Flow[TwitterWebsocketResponse, String, NotUsed] = Flow[TwitterWebsocketResponse].map(Json.toJson(_).toString())
-  //
-  //
-  //    bcast.out(0) ~> jsonStringTransformer ~> fileSink.async
-  //    bcast.out(1)  ~> jsonStringTransformer ~> modifiedKafkaSink(kafkaTopic) ~> kafka.sink.get.async
-  //    FlowShape(bcast.in, bcast.out(2))
-  //  })
-
-//  def storageSink(kafkaTopic: String, hashTag: Hashtag) = Flow.fromGraph(GraphDSL.create() { implicit builder =>
-//    import GraphDSL.Implicits._
-//
-//    val filename: String = s"twitter-cleanup-tweet.log.${new SimpleDateFormat("yyyy-MM-dd-HHmmss").format(new Date)}"
-//
-//    val bcast = builder.add(Broadcast[String](3))
-//    val fileSink = Flow[JsValue].map(s => ByteString(s.toString() + "\n"))
-//      .toMat(FileIO.toPath(Paths.get(filename)))(Keep.right)
-//
-//    val jsonStringTransformer: Flow[String, JsValue, NotUsed] = Flow[String].map { s =>
-//      Json.obj("timestamp" -> System.currentTimeMillis(),
-//        "hashtag" -> hashTag.toString,
-//        "tweet" -> Json.parse(s))
-//    }
-//
-//    bcast.out(0) ~> jsonStringTransformer ~> fileSink.async
-//    bcast.out(1) ~> jsonStringTransformer ~> modifiedKafkaSink(kafkaTopic) ~> kafka.sink.get.async
-//    FlowShape(bcast.in, bcast.out(2))
-//  })
-
-
   def adhocSource[T](source: Source[T, _], timeout: FiniteDuration, maxRetries: Int): Source[T, _] =
     Source.lazily(
       () => source.backpressureTimeout(timeout).recoverWithRetries(maxRetries, {
@@ -424,58 +256,6 @@ class StreamUtility @Inject()(config: Config, kafka: Kafka)(implicit system: Act
           Source.lazily(() ⇒ source.backpressureTimeout(timeout)).mapMaterializedValue(_ => NotUsed)
       })
     )
-
-
-//  def transformTwitterSource(twitterSource: Source[ByteString, _], hashTag: Hashtag, throttleDelay: Int) = {
-//
-//    val kafkaTopic = "twitter"
-//    val modifiedSource = twitterSource.map { result =>
-//      val receivedTweet = result.utf8String
-//      logger.info(s"Received Message : $receivedTweet")
-//      receivedTweet.trim
-//    }
-//      //.via(stringThrottledSink(throttleDelay))
-//      //.via(stringBufferedSink)
-//
-//
-//      .via(cleanUpGraph)
-//      //      .flatMapConcat({
-//      //      case "" => {
-//      //        logger.info("Empty String found!")
-//      //        Source.empty
-//      //      }
-//      //      case "Exceeded connection limit for user" => {
-//      //        logger.info("Twitter connection exceeded!")
-//      //        Source.empty
-//      //      }
-//      //      case other => {
-//      //        //logger.info("normal message")
-//      //        Source.single(other)
-//      //      }
-//      //    })
-//      .via(storageSink(kafkaTopic, hashTag)).async
-//      .map { msg =>
-//        //logger.info(s"Buffered and Throttled Message : $msg")
-//        //jsonTransformation(hashTag, msg)
-//        messageTransformer(hashTag, msg)
-//
-//        //val tweetInfo = TweetInfo(keyword, (json \ "id").as[Long], (json \ "text").as[String], (json \ "user" \ "name").as[String])
-//        //        logger.info(Json.toJson(tweetInfo).toString())
-//        //logger.info(Json.prettyPrint(json))
-//
-//        //Try(Json.parse(bytes.toArray).validate[Tweet])
-//      }
-//      .recover {
-//        //        case _: TimeoutException => logger.info("No messages received for 30 seconds")
-//        //        case _: RuntimeException => logger.info( "stream truncated")
-//        case e => {
-//          logger.error("Error in transformTwitterSource - " + e.getMessage)
-//          throw e
-//        }
-//      }
-//    modifiedSource
-//  }
-
 
   def streamComplete(status: Try[Done]): Unit = {
     status match {
@@ -508,11 +288,9 @@ class StreamUtility @Inject()(config: Config, kafka: Kafka)(implicit system: Act
         }
       })
 
-
-
     val sinkFilename = s"combined-file-${DateTimeFormatter.ofPattern("yyyy-mm-dd hh:mm:ss").format(LocalDateTime.now())}.log"
     val fileSink = lineSink(sinkFilename)
-    val bcast = builder.add(Broadcast[String](4))
+    val bcast = builder.add(Broadcast[String](3))
     //val merge = builder.add(Merge[String](2))
 
     val jsonSinkFilename = s"combined-json-file-${DateTimeFormatter.ofPattern("yyyy-mm-dd hh:mm:ss").format(LocalDateTime.now())}.log"
@@ -575,86 +353,15 @@ class StreamUtility @Inject()(config: Config, kafka: Kafka)(implicit system: Act
         }
       }
 
-
-
-//    val blockingFlow = Flow[String].take(0)
-
     in ~> delimiter ~> lineFilter ~> bcast ~> Sink.onComplete(streamComplete)
     bcast ~> fileSink.async
     bcast ~> jsonTransformer2 ~> jsonFileSink.async
-    bcast ~> modifiedKafkaSink(kafkaTopic) ~> kafka.sink.async
+    //bcast ~> modifiedKafkaSink(kafkaTopic) ~> kafka.sink.async
 
-
-//    in ~> delimiter ~> lineFilter ~> bcast ~> merge ~> fileSink.async
-//    bcast ~> jsonTransformer ~> merge
-
-    //in ~> delimiter ~> lineFilter ~> Sink.ignore
-
-//    in ~> delimiter ~> lineFilter ~> bcast ~> validReq ~> f2 ~> merge ~> out
-//    bcast ~> invalidReq ~> blockingFlow ~> merge
     ClosedShape
   })
 
-  def processFile(filename: String) = {
 
-
-    val lineFilter = Flow[String]
-      .filter(_.contains("Full JSON Payload is"))
-      .map(_.split(" :: ")(1))
-
-    val finalSink = Sink.foreach[String](logger.info(_))
-    //val finalSink = Sink.ignore
-
-
-//    val loggingMaterializer = ActorMaterializer(ActorMaterializerSettings(system).withSupervisionStrategy { e =>
-//      logger.info(s"Exception: $e")
-//      Supervision.Stop
-//    })
-
-    FileIO.fromPath(Paths.get(filename))
-      //.withAttributes(ActorAttributes.dispatcher("blocking-io-dispatcher"))
-
-      .via(Framing.delimiter(ByteString("\n"), 100000, true).map(_.utf8String))
-      .log("Stream Error")
-      .via(lineFilter)
-      //.alsoTo(lineSink(s"combined-file-${DateTimeFormatter.ofPattern("yyyy-dd-mm kk:hh:ss").format(LocalDateTime.now())}.log"))
-
-      .withAttributes(
-        Attributes.logLevels(
-          //onElement = Logging.WarningLevel,
-          onFinish = Logging.InfoLevel,
-          onFailure = Logging.DebugLevel
-        )
-      )
-//      .recoverWithRetries(10, {
-//        case _: RuntimeException => {
-//          logger.error( "Runtime Exeption ")
-//          Source.single("Streaming Halted")
-//        }
-//      })
-      .log("Stream Error")
-      .mapAsync(1) { u =>
-        Future.successful {
-
-        }
-      }
-
-
-      //      .recover {
-      //        case e: Exception => e.getMessage
-      //      }
-      //      .recoverWithRetries(attempts = 10, {
-      //        case e: FramingException => Source.single(s"Unreadable line : ${e.getMessage}")
-      //      })
-//      .addAttributes(ActorAttributes.supervisionStrategy {
-//        case ex: Throwable =>
-//          logger.error("Error parsing row event: {}", ex)
-//          Supervision.Restart
-//      })
-      //.withAttributes(ActorAttributes.supervisionStrategy(Supervision.resumingDecider))
-      .runWith(Sink.ignore)
-
-  }
 
   def consumeKafka(topic: String): Unit = {
     kafka.source(topic)

@@ -19,40 +19,25 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.fibbo.logparser.di.module
+package com.fibbometrix.logparser.di.module
 
 import java.io.File
-import java.lang.Exception
-import java.time.{LocalDateTime, ZoneId, ZoneOffset, ZonedDateTime}
-import java.time.format.DateTimeFormatter
 
 import akka.actor.{ActorRef, ActorSystem, DeadLetter, Props}
-import com.fibbo.logparser.actor._
+import com.fibbometrix.logparser.actor.DeadLetterMonitorActor
+import com.fibbometrix.logparser.actor.Master.Workload
+import com.fibbometrix.logparser.util.StreamUtility
 import com.google.inject.AbstractModule
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
 import javax.inject.{Inject, Named}
 
-import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, ExecutionContext}
-import akka.pattern.ask
-import akka.pattern.{ask, pipe}
-import akka.util.Timeout
-import com.fibbo.logparser.actor.Master.Workload
-import com.fibbo.logparser.di.intf.Kafka
-import com.fibbo.logparser.util.StreamUtility
+import scala.concurrent.ExecutionContext
 
-import scala.concurrent.duration._
-import scala.util.{Failure, Success, Try}
-import java.util.regex.Matcher
-import java.util.regex.Pattern
-
-import scala.util.matching.Regex
 
 class StartupModule extends AbstractModule {
   override def configure(): Unit = {
     bind(classOf[Startup]).to(classOf[StartupRunner]).asEagerSingleton()
-    //bind(classOf[RouteHandler]).asEagerSingleton()
   }
 }
 
@@ -68,13 +53,7 @@ class StartupRunner @Inject()(config: Config, @Named("masterActor") masterActor:
       name = "deadlettermonitoractor")
   system.eventStream.subscribe(deadLetterMonitorActor, classOf[DeadLetter])
 
-  //  implicit val timeout = Timeout(5.seconds)
-//  val result = (shapeActor ? Rectangle(3.0, 4.0)).mapTo[Double]
-//  val value = Await.result(result, Duration.Inf)
-//  logger.info(s"Result: ${value.toString}")
-
-
-  val directory = new File("mg")
+  val directory = new File("source_logs")
   //val files = directory.listFiles.filter(_.isFile).map(_.getAbsolutePath).filter(_.endsWith(".json")).to[List]
   val files = directory.listFiles.filter(_.isFile).map(_.getAbsolutePath).filter(!_.endsWith("DS_Store")).to[List]
   masterActor ! Workload(files)

@@ -19,19 +19,15 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.fibbo.logparser.di.module
-
-import java.net.URI
+package com.fibbometrix.logparser.di.module
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.stream.ActorMaterializer
-import com.fibbo.logparser.actor.{Master, MyActor}
-import com.fibbo.logparser.core.ShapeProcessor
-import com.fibbo.logparser.util.StreamUtility
-import com.fibbo.logparser.di.impl.KafkaImpl
-import com.fibbo.logparser.di.intf.Kafka
-import com.google.inject.{AbstractModule, Provides, Singleton}
-//import com.redis.RedisClient
+import com.fibbometrix.logparser.actor.Master
+import com.fibbometrix.logparser.di.impl.KafkaImpl
+import com.fibbometrix.logparser.di.intf.Kafka
+import com.fibbometrix.logparser.util.StreamUtility
+import com.google.inject.{AbstractModule, Provides}
 import com.typesafe.config.Config
 import javax.inject.Named
 import net.codingwell.scalaguice.ScalaModule
@@ -45,20 +41,8 @@ class CentralModule(actorSystem: ActorSystem, materializer: ActorMaterializer, c
     bind[ActorSystem].toInstance(actorSystem)
     bind[ExecutionContext].toInstance(actorSystem.dispatcher)
     bind[ActorMaterializer].toInstance(materializer)
-    bind[ShapeProcessor]
     bind[Kafka].to[KafkaImpl]
   }
-
-//  @Provides
-//  def provideRedisClient(config: Config): RedisClient = {
-//    new RedisClient(new URI(config.getString("redis.uri")))
-//  }
-
-//  @Provides
-//  @Named("shapeActor")
-//  def getShapeActor(actorSystem: ActorSystem, shapeProcessor: ShapeProcessor): ActorRef = {
-//    actorSystem.actorOf(Props(new MyActor(shapeProcessor)))
-//  }
 
   @Provides
   @Named("masterActor")

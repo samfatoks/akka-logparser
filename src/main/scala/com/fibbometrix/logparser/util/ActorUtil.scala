@@ -1,4 +1,4 @@
-package com.fibbo.logparser.util
+package com.fibbometrix.logparser.util
 
 import akka.actor.ActorRef
 import com.google.inject.name.Names
